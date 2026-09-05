@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>総当たりスコアボード | 4チーム総当たり2周の得点記録アプリ</title>
+<meta name="description" content="4チーム総当たり2周の試合を、その場でサクサク得点記録。順位表も自動集計。完全無料・広告なし・通信なし、データは端末内だけに保存されるiOSアプリです。">
+<link rel="canonical" href="https://ryoseiimai.github.io/round-robin-scoreboard/">
+<meta name="robots" content="index, follow">
+<style>
+  :root{
+    --bg:#0f1115; --card:#1b1e26; --card2:#22262f; --text:#f1f2f4; --sub:#9aa0ac;
+    --accent:#4f8cff; --line:#2a2d36;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;}
+  a{color:var(--accent);}
+  .wrap{max-width:720px;margin:0 auto;padding:0 20px;}
+  header.hero{padding:64px 0 48px;text-align:center;border-bottom:1px solid var(--line);}
+  .eyebrow{font-size:13px;color:var(--sub);letter-spacing:.08em;margin:0 0 12px;}
+  h1{font-size:clamp(28px,5vw,42px);margin:0 0 16px;line-height:1.3;}
+  .lead{font-size:16px;color:var(--sub);line-height:1.8;max-width:520px;margin:0 auto 28px;}
+  .badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:8px;}
+  .badge{background:var(--card2);border:1px solid var(--line);color:var(--sub);font-size:12px;padding:6px 12px;border-radius:999px;}
+  section{padding:48px 0;border-bottom:1px solid var(--line);}
+  section:last-of-type{border-bottom:none;}
+  h2{font-size:22px;margin:0 0 20px;}
+  .steps{display:grid;gap:14px;}
+  .step{background:var(--card);border-radius:14px;padding:16px 18px;display:flex;gap:14px;align-items:flex-start;}
+  .step-num{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .step p{margin:4px 0 0;color:var(--sub);font-size:14px;line-height:1.7;}
+  .step strong{font-size:15px;}
+  .features{display:grid;gap:12px;grid-template-columns:1fr;}
+  @media(min-width:560px){.features{grid-template-columns:1fr 1fr;}}
+  .feature{background:var(--card);border-radius:14px;padding:16px 18px;}
+  .feature h3{margin:0 0 6px;font-size:15px;}
+  .feature p{margin:0;color:var(--sub);font-size:13px;line-height:1.7;}
+  .privacy-box{background:var(--card);border-radius:14px;padding:20px;font-size:14px;color:var(--sub);line-height:1.9;}
+  .privacy-box strong{color:var(--text);}
+  footer{padding:36px 0 60px;text-align:center;}
+  .footer-links{display:flex;gap:18px;justify-content:center;font-size:13px;margin-bottom:16px;}
+  .copyright{color:var(--sub);font-size:12px;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">SCOREBOARD FOR ROUND-ROBIN TOURNAMENT</p>
+    <h1>4チーム総当たり2周を、<br>その場でサクサク記録。</h1>
+    <p class="lead">チームとメンバーを登録するだけで、総当たり2周ぶんの試合表が自動でできます。試合中は得点をワンタップで記録、終わったら順位表も自動集計。</p>
+    <div class="badges">
+      <span class="badge">完全無料</span>
+      <span class="badge">広告なし</span>
+      <span class="badge">通信なし</span>
+      <span class="badge">データは端末内のみ</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>使い方は3ステップ</h2>
+    <div class="steps">
+      <div class="step">
+        <span class="step-num">1</span>
+        <div><strong>チームとメンバーを登録する</strong>
+          <p>4チームぶんのチーム名・色・メンバーを入力するだけ。総当たり2周の試合表が自動で組まれます。</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">2</span>
+        <div><strong>試合ごとに得点を記録する</strong>
+          <p>試合一覧から対戦を選び、得点したメンバーをタップするだけで記録できます。誤タップは取り消しも可能。</p>
+        </div>
+      </div>
+      <div class="step">
+        <span class="step-num">3</span>
+        <div><strong>順位表を見る</strong>
+          <p>全試合の結果から、チーム順位表が自動で集計されます。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>主な機能</h2>
+    <div class="features">
+      <div class="feature">
+        <h3>総当たり2周を自動生成</h3>
+        <p>4チームの総当たり2周ぶんの試合カードを自動で組みます。手作業でのトーナメント表づくりは不要です。</p>
+      </div>
+      <div class="feature">
+        <h3>その場で得点記録</h3>
+        <p>試合中に得点したメンバーをタップするだけ。得点ログは1件ずつ長押しで取り消せます。</p>
+      </div>
+      <div class="feature">
+        <h3>試合の中断・再開</h3>
+        <p>試合を一旦終了しても、あとから再開して記録を続けられます。</p>
+      </div>
+      <div class="feature">
+        <h3>順位表を自動集計</h3>
+        <p>全試合の結果から、チームごとの順位を自動で計算して表示します。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>プライバシーについて</h2>
+    <div class="privacy-box">
+      <p>本アプリは<strong>個人情報や利用状況を一切収集しません</strong>。分析ツールや広告SDKは組み込んでおらず、アプリ自体が外部のサーバーと通信することもありません。</p>
+      <p>登録したチーム・メンバー・試合結果は、すべて<strong>お使いの端末内にのみ</strong>保存されます。詳しくは<a href="privacy/">プライバシーポリシー</a>をご覧ください。</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-links">
+      <a href="privacy/">プライバシーポリシー</a>
+      <a href="support/">サポート</a>
+      <a href="mailto:kaeru3160@gmail.com">お問い合わせ</a>
+    </div>
+    <p class="copyright">&copy; 2026 Ryosei Imai（今井涼晴）. 総当たりスコアボードは個人開発のiOSアプリです。</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "appId": "jp.co.ryoseiworld.scoreboard",
+  "appName": "総当たりスコアボード",
+  "webDir": "www",
+  "ios": {
+    "backgroundColor": "#0f1115",
+    "preferredContentMode": "mobile",
+    "contentInset": "automatic"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "launchAutoHide": true,
+      "backgroundColor": "#0f1115",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "overlaysWebView": true,
+      "style": "LIGHT",
+      "backgroundColor": "#0f1115"
+    }
+  }
+}

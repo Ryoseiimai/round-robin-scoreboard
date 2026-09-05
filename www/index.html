@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1115">
+<title>総当たり得点記録</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#1b1e26; --card2:#22262f; --text:#f1f2f4; --sub:#9aa0ac; --accent:#4f8cff;
+    --red:#e5484d; --blue:#3b82f6; --yellow:#eab308; --green:#22c55e; --white:#f5f5f5; --black:#2b2d31; --orange:#f97316; --purple:#a855f7;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;overscroll-behavior-y:none;}
+  body{padding-bottom:calc(76px + env(safe-area-inset-bottom));}
+  h1,h2,h3{margin:0 0 8px;}
+  p{margin:0 0 8px;}
+  .sub{color:var(--sub);font-size:13px;}
+  .screen{display:none;padding:calc(16px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));max-width:520px;margin:0 auto;}
+  .screen.active{display:block;}
+  .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+  .row{display:flex;gap:8px;align-items:center;}
+  .row-between{display:flex;justify-content:space-between;align-items:center;}
+  input[type=text]{background:var(--card2);border:1px solid #333;color:var(--text);border-radius:10px;padding:12px;font-size:16px;width:100%;}
+  button{font-family:inherit;border:none;border-radius:12px;padding:12px 14px;font-size:16px;font-weight:600;cursor:pointer;color:#fff;background:var(--accent);touch-action:manipulation;-webkit-user-select:none;user-select:none;}
+  button.secondary{background:var(--card2);color:var(--text);}
+  button.danger{background:var(--red);}
+  button.ghost{background:transparent;color:var(--sub);border:1px solid #444;}
+  button:disabled{opacity:.4;cursor:default;}
+  button:active{transform:scale(0.97);}
+  .colorpicker{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0;}
+  .swatch{position:relative;width:44px;height:44px;border-radius:50%;border:3px solid transparent;cursor:pointer;flex-shrink:0;}
+  .swatch.selected{border-color:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.4);}
+  .swatch.selected::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:18px;text-shadow:0 0 3px rgba(0,0,0,.85);}
+  .member-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+  .member-row span{flex:1;background:var(--card2);padding:10px 12px;border-radius:10px;}
+  .team-block{border-left:6px solid #888;padding-left:10px;margin-bottom:16px;}
+  .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;}
+  .badge.pending{background:#333;color:#ccc;}
+  .badge.ongoing{background:#a15c00;color:#fff;}
+  .badge.done{background:#1a6b34;color:#fff;}
+  .match-card{display:flex;flex-direction:column;gap:8px;cursor:pointer;}
+  .match-teams{display:flex;align-items:center;justify-content:space-between;}
+  .team-tag{display:flex;align-items:center;gap:8px;font-weight:700;}
+  .dot{width:18px;height:18px;border-radius:50%;display:inline-block;flex-shrink:0;}
+  .score-big{font-size:22px;font-weight:800;}
+  .vs{color:var(--sub);font-size:13px;}
+  /* 試合画面 */
+  .live-header{display:flex;gap:8px;margin-bottom:10px;}
+  .live-team{flex:1;border-radius:16px;padding:14px 8px;text-align:center;color:#fff;}
+  .live-team .name{font-size:15px;font-weight:700;opacity:.9;}
+  .live-team .score{font-size:44px;font-weight:900;line-height:1.1;margin-top:2px;transition:transform .15s;}
+  .live-team .score.pop{transform:scale(1.3);}
+  .live-controls{display:flex;gap:8px;margin:10px 0;}
+  .live-play{display:flex;gap:8px;min-height:52vh;}
+  .live-side{flex:1;display:flex;flex-direction:column;gap:8px;border-radius:16px;padding:6px;background:rgba(255,255,255,.03);}
+  .side-title{font-size:12px;color:var(--sub);margin:2px 2px 4px;text-align:center;}
+  .member-btn{flex:1;min-height:64px;font-size:17px;font-weight:800;border-radius:14px;width:100%;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;box-shadow:0 3px 0 rgba(0,0,0,.28);}
+  .member-btn:active{transform:scale(.95) translateY(1px);box-shadow:0 1px 0 rgba(0,0,0,.28);}
+  .member-btn.bounce{animation:memberBounce .25s ease;}
+  @keyframes memberBounce{0%{transform:scale(1);}45%{transform:scale(1.08);}100%{transform:scale(1);}}
+  .log-list{max-height:180px;overflow-y:auto;font-size:14px;background:var(--card2);border-radius:10px;padding:8px 10px;margin-top:10px;}
+  .log-row{padding:6px 2px;border-bottom:1px solid #2c2f38;display:flex;justify-content:space-between;}
+  .log-row:last-child{border-bottom:none;}
+  .log-hint{font-size:11px;color:var(--sub);margin:4px 2px 0;}
+  .confirm-panel{background:var(--card2);border:1px solid #3a3f4a;border-radius:12px;padding:14px;margin:10px 0;}
+  .confirm-panel .row{margin-top:10px;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{padding:8px 6px;text-align:center;border-bottom:1px solid #2c2f38;}
+  th{color:var(--sub);font-weight:600;font-size:12px;}
+  td.name-cell{text-align:left;}
+  nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#151820;border-top:1px solid #2a2d36;padding-bottom:env(safe-area-inset-bottom);}
+  nav button{flex:1;min-height:56px;background:transparent;border-radius:0;padding:14px 0;font-size:14px;color:var(--sub);font-weight:600;}
+  nav button.active{color:var(--accent);}
+  body.onboarding nav{display:none;}
+  .empty{color:var(--sub);text-align:center;padding:20px 0;font-size:14px;}
+  .reset-warn{font-size:12px;color:var(--sub);margin-top:6px;}
+  .rank-1{color:#ffd54a;}
+  .rank-card{display:flex;align-items:center;gap:10px;background:var(--card2);border-left:6px solid #888;border-radius:12px;padding:10px 12px;margin-bottom:8px;}
+  .rank-num{width:32px;text-align:center;font-weight:800;font-size:18px;flex-shrink:0;}
+  .rank-info{flex:1;min-width:0;}
+  .rank-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .rank-sub{font-size:12px;color:var(--sub);}
+  .rank-pts{font-size:20px;font-weight:900;text-align:right;flex-shrink:0;}
+  .rank-pts-label{font-size:11px;color:var(--sub);margin-left:2px;font-weight:600;}
+  .wizard-step-label{font-size:13px;color:var(--sub);margin-bottom:4px;}
+  .wizard-nav{display:flex;gap:8px;margin-top:14px;}
+  .finale-title{font-size:34px;}
+  @media (orientation: landscape) and (max-height: 480px){
+    .live-play{min-height:40vh;}
+    .member-btn{min-height:48px;font-size:15px;}
+    .live-team .score{font-size:32px;}
+  }
+</style>
+</head>
+<body class="onboarding">
+
+<div id="screen-onboard" class="screen active">
+  <div class="wizard-step-label" id="onboardStepLabel">ステップ 1 / 3</div>
+  <h2>大会の準備</h2>
+  <div id="onboardBody"></div>
+  <div class="wizard-nav">
+    <button class="ghost" id="btnOnboardBack" style="flex:1;">戻る</button>
+    <button id="btnOnboardNext" style="flex:2;">次へ</button>
+  </div>
+</div>
+
+<div id="screen-settings" class="screen">
+  <h2>設定</h2>
+  <div id="teamsContainer"></div>
+  <div class="card">
+    <button id="btnReset" class="danger" style="width:100%;">全データリセット</button>
+    <p class="reset-warn" id="resetNote">もう一度押すと確定します</p>
+  </div>
+</div>
+
+<div id="screen-matches" class="screen">
+  <h2>試合一覧</h2>
+  <div id="matchesList"></div>
+</div>
+
+<div id="screen-live" class="screen">
+  <div class="row-between" style="margin-bottom:8px;">
+    <button class="ghost" id="btnBackToList">← 試合一覧へ</button>
+    <span id="liveStatusBadge" class="badge"></span>
+  </div>
+  <div class="live-header" id="liveHeader"></div>
+  <div class="live-controls">
+    <button class="secondary" id="btnUndo" style="flex:1;">取り消し</button>
+    <button id="btnFinish" style="flex:1;">試合終了</button>
+  </div>
+  <div id="finishConfirmPanel" class="confirm-panel" style="display:none;">
+    <p style="margin:0;">この試合を終了しますか？あとで「再開」で戻せます。</p>
+    <div class="row">
+      <button class="ghost" id="btnFinishCancel" style="flex:1;">キャンセル</button>
+      <button class="danger" id="btnFinishConfirm" style="flex:1;">終了する</button>
+    </div>
+  </div>
+  <div id="liveNextPanel" style="display:none;"></div>
+  <div class="live-play">
+    <div class="live-side" id="homeSide">
+      <div class="side-title" id="homeSideTitle"></div>
+      <div id="homeMembers" style="display:flex;flex-direction:column;gap:8px;flex:1;"></div>
+    </div>
+    <div class="live-side" id="awaySide">
+      <div class="side-title" id="awaySideTitle"></div>
+      <div id="awayMembers" style="display:flex;flex-direction:column;gap:8px;flex:1;"></div>
+    </div>
+  </div>
+  <h3 style="margin-top:16px;">得点ログ</h3>
+  <p class="log-hint">行を長押し(0.5秒)すると、その1点だけ取り消せます</p>
+  <div class="log-list" id="liveLog"><div class="empty">まだ得点なし</div></div>
+</div>
+
+<div id="screen-rank" class="screen">
+  <h2>順位</h2>
+  <div class="card">
+    <h3>チーム順位表</h3>
+    <div id="standingsTable"></div>
+  </div>
+  <div class="card">
+    <h3>個人得点ランキング</h3>
+    <div id="scorersTable"></div>
+  </div>
+  <div class="card">
+    <button id="btnShare" style="width:100%;">結果をコピー / 共有</button>
+  </div>
+  <div class="card">
+    <h3>試合結果一覧</h3>
+    <div id="resultsList"></div>
+  </div>
+</div>
+
+<div id="screen-finale" class="screen">
+  <div id="finaleBody"></div>
+  <div class="card">
+    <button id="btnFinaleRank" style="width:100%;margin-bottom:8px;">順位・記録をくわしく見る</button>
+    <button class="secondary" id="btnFinaleShare" style="width:100%;">結果をコピー / 共有</button>
+  </div>
+</div>
+
+<nav>
+  <button data-screen="matches" class="active">試合</button>
+  <button data-screen="rank">順位</button>
+  <button data-screen="settings">設定</button>
+</nav>
+
+<script>
+(function(){
+  "use strict";
+  var STORAGE_KEY = "rr-scoreboard-v1";
+  var COLORS = [
+    {key:"red", label:"赤", css:"#e5484d"},
+    {key:"blue", label:"青", css:"#3b82f6"},
+    {key:"yellow", label:"黄", css:"#eab308"},
+    {key:"green", label:"緑", css:"#22c55e"},
+    {key:"white", label:"白", css:"#f5f5f5"},
+    {key:"black", label:"黒", css:"#2b2d31"},
+    {key:"orange", label:"橙", css:"#f97316"},
+    {key:"purple", label:"紫", css:"#a855f7"}
+  ];
+
+  function colorCss(key){
+    for (var i=0;i<COLORS.length;i++){ if(COLORS[i].key===key) return COLORS[i].css; }
+    return "#888";
+  }
+  function colorLabel(key){
+    for (var i=0;i<COLORS.length;i++){ if(COLORS[i].key===key) return COLORS[i].label; }
+    return "?";
+  }
+  function colorTextOn(key){
+    return (key==="white" || key==="yellow") ? "#111" : "#fff";
+  }
+
+  function defaultState(){
+    return {
+      teams: [
+        {name:"", color:"red", members:[]},
+        {name:"", color:"blue", members:[]},
+        {name:"", color:"yellow", members:[]},
+        {name:"", color:"green", members:[]}
+      ],
+      started: false,
+      matches: [], // {home, away, homeScore, awayScore, status, log:[{player, teamIdx}]}
+      resetArmed: false
+    };
+  }
+
+  var state = load();
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      // 簡易マイグレーション: 欠けフィールドはデフォルトで補う（バージョン間の細かい互換処理は省略。限界:古い形式の壊れたデータは読めない。本格対応するならスキーマバージョン番号を持たせて分岐する）
+      var d = defaultState();
+      return Object.assign(d, parsed);
+    }catch(e){
+      return defaultState();
+    }
+  }
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  // ---------- 日程生成 ----------
+  function generateSchedule(){
+    // 4チーム(0,1,2,3) 総当たり2周、同カード連続なしのラウンド構成
+    var pairsOrder = [[[0,1],[2,3]], [[0,2],[1,3]], [[0,3],[1,2]]];
+    var matches = [];
+    for (var lap=0; lap<2; lap++){
+      for (var r=0; r<pairsOrder.length; r++){
+        pairsOrder[r].forEach(function(pair){
+          matches.push({home:pair[0], away:pair[1], homeScore:0, awayScore:0, status:"pending", log:[]});
+        });
+      }
+    }
+    return matches;
+  }
+
+  function ensureTeamNames(){
+    state.teams.forEach(function(team){
+      if (!team.name || !team.name.trim()){
+        team.name = colorLabel(team.color) + "組";
+      }
+    });
+  }
+
+  // ---------- タブ切替 ----------
+  var screens = ["onboard","settings","matches","live","rank","finale"];
+  function showScreen(name){
+    screens.forEach(function(s){
+      document.getElementById("screen-"+s).classList.toggle("active", s===name);
+    });
+    document.querySelectorAll("nav button").forEach(function(b){
+      b.classList.toggle("active", b.dataset.screen===name);
+    });
+    window.scrollTo(0,0);
+  }
+  document.querySelectorAll("nav button").forEach(function(b){
+    b.addEventListener("click", function(){
+      showScreen(b.dataset.screen);
+      if (b.dataset.screen==="matches") renderMatches();
+      if (b.dataset.screen==="rank") renderRank();
+      if (b.dataset.screen==="settings") renderSettings();
+    });
+  });
+
+  // ---------- 初回ウィザード ----------
+  var onboardStep = 1;
+
+  function buildTeamNameColorBlock(team){
+    var block = document.createElement("div");
+    block.className = "card team-block";
+    block.style.borderLeftColor = colorCss(team.color);
+
+    var nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.value = team.name;
+    nameInput.placeholder = colorLabel(team.color) + "組（未入力なら自動で使われます）";
+    nameInput.addEventListener("input", function(){
+      team.name = nameInput.value;
+      save();
+    });
+    block.appendChild(nameInput);
+
+    var picker = document.createElement("div");
+    picker.className = "colorpicker";
+    COLORS.forEach(function(c){
+      var sw = document.createElement("div");
+      sw.className = "swatch" + (team.color===c.key ? " selected" : "");
+      sw.style.background = c.css;
+      sw.title = c.label;
+      sw.addEventListener("click", function(){
+        team.color = c.key;
+        save();
+        renderOnboard();
+      });
+      picker.appendChild(sw);
+    });
+    block.appendChild(picker);
+    return block;
+  }
+
+  function buildTeamMembersBlock(team){
+    var block = document.createElement("div");
+    block.className = "card team-block";
+    block.style.borderLeftColor = colorCss(team.color);
+    var title = document.createElement("h3");
+    title.textContent = team.name || (colorLabel(team.color) + "組");
+    block.appendChild(title);
+
+    var memberList = document.createElement("div");
+    team.members.forEach(function(name, mi){
+      var mrow = document.createElement("div");
+      mrow.className = "member-row";
+      var span = document.createElement("span");
+      span.textContent = name;
+      var del = document.createElement("button");
+      del.className = "ghost";
+      del.textContent = "削除";
+      del.addEventListener("click", function(){
+        team.members.splice(mi,1);
+        save();
+        renderOnboard();
+      });
+      mrow.appendChild(span);
+      mrow.appendChild(del);
+      memberList.appendChild(mrow);
+    });
+    block.appendChild(memberList);
+
+    var addRow = document.createElement("div");
+    addRow.className = "row";
+    var addInput = document.createElement("input");
+    addInput.type = "text";
+    addInput.placeholder = "メンバー名を入力";
+    var addBtn = document.createElement("button");
+    addBtn.className = "secondary";
+    addBtn.textContent = "追加";
+    function doAdd(){
+      var v = addInput.value.trim();
+      if (!v) return;
+      team.members.push(v);
+      addInput.value = "";
+      save();
+      renderOnboard();
+    }
+    addBtn.addEventListener("click", doAdd);
+    addInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); doAdd(); } });
+    addRow.appendChild(addInput);
+    addRow.appendChild(addBtn);
+    block.appendChild(addRow);
+    return block;
+  }
+
+  function renderOnboard(){
+    document.getElementById("onboardStepLabel").textContent = "ステップ " + onboardStep + " / 3";
+    var body = document.getElementById("onboardBody");
+    body.innerHTML = "";
+    var backBtn = document.getElementById("btnOnboardBack");
+    var nextBtn = document.getElementById("btnOnboardNext");
+
+    if (onboardStep===1){
+      var h = document.createElement("h3");
+      h.textContent = "① チーム名と色を決めよう";
+      body.appendChild(h);
+      state.teams.forEach(function(team){ body.appendChild(buildTeamNameColorBlock(team)); });
+      backBtn.style.visibility = "hidden";
+      nextBtn.textContent = "次へ";
+    } else if (onboardStep===2){
+      var h2 = document.createElement("h3");
+      h2.textContent = "② メンバーを登録しよう";
+      body.appendChild(h2);
+      state.teams.forEach(function(team){ body.appendChild(buildTeamMembersBlock(team)); });
+      backBtn.style.visibility = "visible";
+      nextBtn.textContent = "次へ";
+    } else {
+      var h3 = document.createElement("h3");
+      h3.textContent = "③ この内容で始めます";
+      body.appendChild(h3);
+      state.teams.forEach(function(team){
+        var card = document.createElement("div");
+        card.className = "card team-block";
+        card.style.borderLeftColor = colorCss(team.color);
+        card.innerHTML = '<div class="row-between"><span style="font-weight:700;">' + escapeHtml(team.name || (colorLabel(team.color)+"組")) + '</span><span class="dot" style="background:' + colorCss(team.color) + '"></span></div>' +
+          '<p class="sub" style="margin-top:6px;">' + (team.members.length ? escapeHtml(team.members.join("、")) : "メンバー未登録") + '</p>';
+        body.appendChild(card);
+      });
+      var note = document.createElement("p");
+      note.className = "sub";
+      note.textContent = "総当たり2周・全12試合の日程を作成します。メンバーは大会中もあとから追加できます。";
+      body.appendChild(note);
+      backBtn.style.visibility = "visible";
+      nextBtn.textContent = "🏁 大会を開始";
+    }
+  }
+
+  document.getElementById("btnOnboardBack").addEventListener("click", function(){
+    if (onboardStep>1){ onboardStep--; renderOnboard(); }
+  });
+  document.getElementById("btnOnboardNext").addEventListener("click", function(){
+    if (onboardStep<3){
+      if (onboardStep===1) ensureTeamNames();
+      onboardStep++;
+      renderOnboard();
+      return;
+    }
+    ensureTeamNames();
+    state.matches = generateSchedule();
+    state.started = true;
+    save();
+    document.body.classList.remove("onboarding");
+    renderSettings();
+    renderMatches();
+    renderRank();
+    showScreen("matches");
+  });
+
+  // ---------- 設定画面（大会中の編集用） ----------
+  function renderSettings(){
+    var container = document.getElementById("teamsContainer");
+    container.innerHTML = "";
+    state.teams.forEach(function(team){
+      var block = document.createElement("div");
+      block.className = "card team-block";
+      block.style.borderLeftColor = colorCss(team.color);
+
+      var nameRow = document.createElement("div");
+      nameRow.className = "row";
+      nameRow.style.marginBottom = "10px";
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.value = team.name;
+      nameInput.placeholder = "チーム名";
+      nameInput.addEventListener("input", function(){
+        team.name = nameInput.value;
+        save();
+      });
+      nameRow.appendChild(nameInput);
+      block.appendChild(nameRow);
+
+      var picker = document.createElement("div");
+      picker.className = "colorpicker";
+      COLORS.forEach(function(c){
+        var sw = document.createElement("div");
+        sw.className = "swatch" + (team.color===c.key ? " selected" : "");
+        sw.style.background = c.css;
+        sw.title = c.label;
+        sw.addEventListener("click", function(){
+          team.color = c.key;
+          save();
+          renderSettings();
+        });
+        picker.appendChild(sw);
+      });
+      block.appendChild(picker);
+
+      var memberList = document.createElement("div");
+      team.members.forEach(function(name, mi){
+        var mrow = document.createElement("div");
+        mrow.className = "member-row";
+        var span = document.createElement("span");
+        span.textContent = name;
+        var del = document.createElement("button");
+        del.className = "ghost";
+        del.textContent = "削除";
+        del.addEventListener("click", function(){
+          team.members.splice(mi,1);
+          save();
+          renderSettings();
+        });
+        mrow.appendChild(span);
+        mrow.appendChild(del);
+        memberList.appendChild(mrow);
+      });
+      block.appendChild(memberList);
+
+      var addRow = document.createElement("div");
+      addRow.className = "row";
+      var addInput = document.createElement("input");
+      addInput.type = "text";
+      addInput.placeholder = "メンバー名を入力（途中参加OK）";
+      var addBtn = document.createElement("button");
+      addBtn.className = "secondary";
+      addBtn.textContent = "追加";
+      function doAdd(){
+        var v = addInput.value.trim();
+        if (!v) return;
+        team.members.push(v);
+        addInput.value = "";
+        save();
+        renderSettings();
+        renderLive();
+      }
+      addBtn.addEventListener("click", doAdd);
+      addInput.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); doAdd(); } });
+      addRow.appendChild(addInput);
+      addRow.appendChild(addBtn);
+      block.appendChild(addRow);
+
+      container.appendChild(block);
+    });
+  }
+
+  var resetBtn = document.getElementById("btnReset");
+  var resetArmed = false;
+  resetBtn.addEventListener("click", function(){
+    if (!resetArmed){
+      resetArmed = true;
+      resetBtn.textContent = "もう一度押すと全消去します";
+      document.getElementById("resetNote").textContent = "取り消すには他の画面へ移動してください";
+      return;
+    }
+    localStorage.removeItem(STORAGE_KEY);
+    state = defaultState();
+    resetArmed = false;
+    onboardStep = 1;
+    resetBtn.textContent = "全データリセット";
+    document.getElementById("resetNote").textContent = "もう一度押すと確定します";
+    document.body.classList.add("onboarding");
+    renderOnboard();
+    renderSettings();
+    renderMatches();
+    renderRank();
+    showScreen("onboard");
+  });
+
+  // ---------- 試合一覧 ----------
+  var currentMatchIndex = null;
+
+  function statusLabel(s){
+    if (s==="pending") return "未";
+    if (s==="ongoing") return "進行中";
+    return "終了";
+  }
+
+  function findNextPendingIndex(){
+    for (var i=0;i<state.matches.length;i++){
+      if (state.matches[i].status==="pending") return i;
+    }
+    return null;
+  }
+
+  function renderMatches(){
+    var list = document.getElementById("matchesList");
+    list.innerHTML = "";
+    if (!state.started || state.matches.length===0){
+      list.innerHTML = '<div class="card empty">まだ大会が開始されていません。</div>';
+      return;
+    }
+    state.matches.forEach(function(m, idx){
+      var home = state.teams[m.home];
+      var away = state.teams[m.away];
+      var card = document.createElement("div");
+      card.className = "card match-card";
+      card.style.borderTop = "4px solid " + colorCss(home.color);
+      card.innerHTML =
+        '<div class="row-between">' +
+          '<span style="font-weight:700;">第' + (idx+1) + '試合</span>' +
+          '<span class="badge ' + m.status + '">' + statusLabel(m.status) + '</span>' +
+        '</div>' +
+        '<div class="match-teams">' +
+          '<span class="team-tag"><span class="dot" style="background:' + colorCss(home.color) + '"></span>' + escapeHtml(home.name) + '</span>' +
+          '<span class="score-big">' + m.homeScore + ' - ' + m.awayScore + '</span>' +
+          '<span class="team-tag">' + escapeHtml(away.name) + '<span class="dot" style="background:' + colorCss(away.color) + '"></span></span>' +
+        '</div>';
+      card.addEventListener("click", function(){
+        currentMatchIndex = idx;
+        if (m.status==="pending") m.status = "ongoing";
+        save();
+        renderLive();
+        showScreen("live");
+      });
+      list.appendChild(card);
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  // ---------- 試合(ライブ)画面 ----------
+  function renderLive(){
+    if (currentMatchIndex===null) return;
+    var m = state.matches[currentMatchIndex];
+    var home = state.teams[m.home];
+    var away = state.teams[m.away];
+
+    document.getElementById("liveStatusBadge").className = "badge " + m.status;
+    document.getElementById("liveStatusBadge").textContent = statusLabel(m.status);
+
+    var header = document.getElementById("liveHeader");
+    header.innerHTML =
+      '<div class="live-team" style="background:' + colorCss(home.color) + ';color:' + colorTextOn(home.color) + '">' +
+        '<div class="name">' + escapeHtml(home.name) + '</div>' +
+        '<div class="score" id="homeScoreEl">' + m.homeScore + '</div>' +
+      '</div>' +
+      '<div class="live-team" style="background:' + colorCss(away.color) + ';color:' + colorTextOn(away.color) + '">' +
+        '<div class="name">' + escapeHtml(away.name) + '</div>' +
+        '<div class="score" id="awayScoreEl">' + m.awayScore + '</div>' +
+      '</div>';
+
+    document.getElementById("homeSideTitle").textContent = home.name;
+    document.getElementById("awaySideTitle").textContent = away.name;
+
+    var disabled = m.status === "done";
+
+    function buildMembers(team, teamIdxKey, containerId){
+      var container = document.getElementById(containerId);
+      container.innerHTML = "";
+      if (team.members.length===0){
+        container.innerHTML = '<div class="empty">メンバー未登録<br>「設定」から追加できます</div>';
+        return;
+      }
+      team.members.forEach(function(name){
+        var btn = document.createElement("button");
+        btn.className = "member-btn";
+        btn.style.background = colorCss(team.color);
+        btn.style.color = colorTextOn(team.color);
+        btn.textContent = name;
+        btn.disabled = disabled;
+        btn.addEventListener("click", function(){
+          btn.classList.add("bounce");
+          setTimeout(function(){ btn.classList.remove("bounce"); }, 250);
+          addGoal(teamIdxKey, name);
+        });
+        container.appendChild(btn);
+      });
+    }
+    buildMembers(home, m.home, "homeMembers");
+    buildMembers(away, m.away, "awayMembers");
+
+    document.getElementById("btnUndo").disabled = m.log.length===0 || disabled;
+    document.getElementById("btnFinish").textContent = m.status==="done" ? "再開" : "試合終了";
+
+    document.getElementById("finishConfirmPanel").style.display = "none";
+
+    var nextPanel = document.getElementById("liveNextPanel");
+    if (m.status==="done"){
+      var nextIdx = findNextPendingIndex();
+      var html = '<div class="card">';
+      html += '<p style="margin:0 0 8px;font-weight:700;">試合終了！ ' + escapeHtml(home.name) + ' ' + m.homeScore + ' - ' + m.awayScore + ' ' + escapeHtml(away.name) + '</p>';
+      if (nextIdx!==null){
+        html += '<button id="btnNextMatch" style="width:100%;">次の試合へ →</button>';
+      } else {
+        html += '<button id="btnGoFinale" style="width:100%;">🏆 表彰式を見る</button>';
+      }
+      html += '</div>';
+      nextPanel.innerHTML = html;
+      nextPanel.style.display = "block";
+      var nb = document.getElementById("btnNextMatch");
+      if (nb) nb.addEventListener("click", function(){
+        currentMatchIndex = nextIdx;
+        state.matches[nextIdx].status = "ongoing";
+        save();
+        renderLive();
+      });
+      var gf = document.getElementById("btnGoFinale");
+      if (gf) gf.addEventListener("click", function(){
+        renderFinale();
+        showScreen("finale");
+      });
+    } else {
+      nextPanel.style.display = "none";
+      nextPanel.innerHTML = "";
+    }
+
+    renderLog();
+  }
+
+  function addGoal(teamIdx, playerName){
+    var m = state.matches[currentMatchIndex];
+    if (m.status==="done") return;
+    if (teamIdx===m.home) m.homeScore++; else m.awayScore++;
+    m.log.push({teamIdx: teamIdx, player: playerName});
+    save();
+    var CapHaptics = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+    if (CapHaptics) CapHaptics.impact({ style: "LIGHT" });
+    else if (navigator.vibrate) navigator.vibrate(10);
+    renderLive();
+    var el = teamIdx===m.home ? document.getElementById("homeScoreEl") : document.getElementById("awayScoreEl");
+    if (el){
+      el.classList.add("pop");
+      setTimeout(function(){ el.classList.remove("pop"); }, 150);
+    }
+  }
+
+  document.getElementById("btnUndo").addEventListener("click", function(){
+    var m = state.matches[currentMatchIndex];
+    if (m.log.length===0) return;
+    var last = m.log.pop();
+    if (last.teamIdx===m.home) m.homeScore = Math.max(0, m.homeScore-1);
+    else m.awayScore = Math.max(0, m.awayScore-1);
+    save();
+    renderLive();
+  });
+
+  document.getElementById("btnFinish").addEventListener("click", function(){
+    var m = state.matches[currentMatchIndex];
+    if (m.status==="done"){
+      m.status = "ongoing";
+      save();
+      renderLive();
+      return;
+    }
+    document.getElementById("finishConfirmPanel").style.display = "block";
+  });
+  document.getElementById("btnFinishCancel").addEventListener("click", function(){
+    document.getElementById("finishConfirmPanel").style.display = "none";
+  });
+  document.getElementById("btnFinishConfirm").addEventListener("click", function(){
+    var m = state.matches[currentMatchIndex];
+    m.status = "done";
+    save();
+    renderLive();
+  });
+
+  document.getElementById("btnBackToList").addEventListener("click", function(){
+    currentMatchIndex = null;
+    renderMatches();
+    showScreen("matches");
+  });
+
+  function deleteLogEntry(i){
+    var m = state.matches[currentMatchIndex];
+    var entry = m.log[i];
+    if (!entry) return;
+    m.log.splice(i,1);
+    if (entry.teamIdx===m.home) m.homeScore = Math.max(0, m.homeScore-1);
+    else m.awayScore = Math.max(0, m.awayScore-1);
+    save();
+    renderLive();
+  }
+
+  var LONG_PRESS_MS = 500;
+  function renderLog(){
+    var m = state.matches[currentMatchIndex];
+    var el = document.getElementById("liveLog");
+    if (m.log.length===0){
+      el.innerHTML = '<div class="empty">まだ得点なし</div>';
+      return;
+    }
+    el.innerHTML = "";
+    m.log.forEach(function(entry, i){
+      var team = state.teams[entry.teamIdx];
+      var line = document.createElement("div");
+      line.className = "log-row";
+      line.innerHTML = '<span>#' + (i+1) + ' ' + colorLabel(team.color) + ' ' + escapeHtml(entry.player) + '</span>';
+      var timer = null;
+      function start(){ timer = setTimeout(function(){ deleteLogEntry(i); }, LONG_PRESS_MS); }
+      function cancel(){ if (timer){ clearTimeout(timer); timer = null; } }
+      line.addEventListener("touchstart", start, {passive:true});
+      line.addEventListener("touchend", cancel);
+      line.addEventListener("touchmove", cancel);
+      line.addEventListener("mousedown", start);
+      line.addEventListener("mouseup", cancel);
+      line.addEventListener("mouseleave", cancel);
+      el.appendChild(line);
+    });
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // ---------- 順位・集計 ----------
+  function computeStandings(){
+    var stats = state.teams.map(function(){ return {win:0, draw:0, lose:0, gf:0, ga:0, pts:0}; });
+    state.matches.forEach(function(m){
+      if (m.status!=="done") return;
+      stats[m.home].gf += m.homeScore;
+      stats[m.home].ga += m.awayScore;
+      stats[m.away].gf += m.awayScore;
+      stats[m.away].ga += m.homeScore;
+      if (m.homeScore > m.awayScore){
+        stats[m.home].win++; stats[m.home].pts += 3;
+        stats[m.away].lose++;
+      } else if (m.homeScore < m.awayScore){
+        stats[m.away].win++; stats[m.away].pts += 3;
+        stats[m.home].lose++;
+      } else {
+        stats[m.home].draw++; stats[m.home].pts += 1;
+        stats[m.away].draw++; stats[m.away].pts += 1;
+      }
+    });
+    var rows = state.teams.map(function(team, idx){
+      var s = stats[idx];
+      return {idx:idx, team:team, win:s.win, draw:s.draw, lose:s.lose, gf:s.gf, ga:s.ga, diff:s.gf-s.ga, pts:s.pts};
+    });
+    rows.sort(function(a,b){
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      if (b.diff !== a.diff) return b.diff - a.diff;
+      if (b.gf !== a.gf) return b.gf - a.gf;
+      return a.team.name.localeCompare(b.team.name, "ja");
+    });
+    return rows;
+  }
+
+  function computeScorers(){
+    var counts = {}; // key: teamIdx+"|"+name -> {name, teamIdx, count}
+    state.matches.forEach(function(m){
+      m.log.forEach(function(entry){
+        var key = entry.teamIdx + "|" + entry.player;
+        if (!counts[key]) counts[key] = {name: entry.player, teamIdx: entry.teamIdx, count: 0};
+        counts[key].count++;
+      });
+    });
+    var arr = Object.keys(counts).map(function(k){ return counts[k]; });
+    arr.sort(function(a,b){ return b.count - a.count; });
+    return arr;
+  }
+
+  function renderRank(){
+    var standings = computeStandings();
+    var standingsEl = document.getElementById("standingsTable");
+    if (!state.started){
+      standingsEl.innerHTML = '<div class="empty">大会が開始されていません</div>';
+    } else {
+      var html = "";
+      standings.forEach(function(r, i){
+        html += '<div class="rank-card" style="border-left-color:' + colorCss(r.team.color) + '">' +
+          '<div class="rank-num">' + (i===0 ? "👑" : (i+1)) + '</div>' +
+          '<div class="rank-info"><div class="rank-name">' + escapeHtml(r.team.name) + '</div>' +
+          '<div class="rank-sub">' + r.win + '勝' + r.draw + '分' + r.lose + '敗　得' + r.gf + ' 失' + r.ga + ' 差' + (r.diff>0?"+":"") + r.diff + '</div></div>' +
+          '<div class="rank-pts">' + r.pts + '<span class="rank-pts-label">pt</span></div>' +
+        '</div>';
+      });
+      standingsEl.innerHTML = html;
+    }
+
+    var scorers = computeScorers();
+    var scorersEl = document.getElementById("scorersTable");
+    if (scorers.length===0){
+      scorersEl.innerHTML = '<div class="empty">まだ得点記録がありません</div>';
+    } else {
+      var html2 = "";
+      scorers.slice(0,10).forEach(function(s, i){
+        var team = state.teams[s.teamIdx];
+        html2 += '<div class="rank-card" style="border-left-color:' + colorCss(team.color) + '">' +
+          '<div class="rank-num">' + (i===0 ? "👑" : (i+1)) + '</div>' +
+          '<div class="rank-info"><div class="rank-name">' + escapeHtml(s.name) + '</div>' +
+          '<div class="rank-sub">' + escapeHtml(team.name) + '</div></div>' +
+          '<div class="rank-pts">' + s.count + '<span class="rank-pts-label">点</span></div>' +
+        '</div>';
+      });
+      scorersEl.innerHTML = html2;
+    }
+
+    var resultsEl = document.getElementById("resultsList");
+    if (!state.started || state.matches.length===0){
+      resultsEl.innerHTML = '<div class="empty">試合がありません</div>';
+    } else {
+      resultsEl.innerHTML = "";
+      state.matches.forEach(function(m, idx){
+        var home = state.teams[m.home];
+        var away = state.teams[m.away];
+        var div = document.createElement("div");
+        div.className = "row-between";
+        div.style.padding = "6px 0";
+        div.style.borderBottom = "1px solid #2c2f38";
+        div.innerHTML = '<span>第' + (idx+1) + '試合: ' + escapeHtml(home.name) + ' vs ' + escapeHtml(away.name) + '</span>' +
+          '<span>' + m.homeScore + '-' + m.awayScore + ' <span class="badge ' + m.status + '">' + statusLabel(m.status) + '</span></span>';
+        resultsEl.appendChild(div);
+      });
+    }
+  }
+
+  function buildShareText(){
+    var standings = computeStandings();
+    var lines = ["🏆 総当たり戦 結果"];
+    standings.forEach(function(r,i){
+      lines.push((i+1) + "位 " + r.team.name + " 勝点" + r.pts + " (" + r.win + "勝" + r.draw + "分" + r.lose + "敗)");
+    });
+    var scorers = computeScorers();
+    if (scorers[0]) lines.push("得点王: " + scorers[0].name + " (" + scorers[0].count + "点)");
+    return lines.join("\n");
+  }
+
+  function shareResults(triggerBtn){
+    var text = buildShareText();
+    if (navigator.share){
+      navigator.share({text: text}).catch(function(){ copyText(text, triggerBtn); });
+      return;
+    }
+    copyText(text, triggerBtn);
+  }
+
+  function copyText(text, triggerBtn){
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        flashButton(triggerBtn, "コピーしました");
+      }).catch(function(){
+        // クリップボードAPI不可の古い環境向けの最終フォールバック。限界:手動コピーになる。本格対応するならexecCommand('copy')の代替経路を足す
+        window.prompt("以下の結果をコピーしてください", text);
+      });
+    } else {
+      window.prompt("以下の結果をコピーしてください", text);
+    }
+  }
+
+  function flashButton(btn, msg){
+    if (!btn) return;
+    var orig = btn.textContent;
+    btn.textContent = msg;
+    setTimeout(function(){ btn.textContent = orig; }, 1500);
+  }
+
+  document.getElementById("btnShare").addEventListener("click", function(){
+    shareResults(document.getElementById("btnShare"));
+  });
+  document.getElementById("btnFinaleShare").addEventListener("click", function(){
+    shareResults(document.getElementById("btnFinaleShare"));
+  });
+  document.getElementById("btnFinaleRank").addEventListener("click", function(){
+    renderRank();
+    showScreen("rank");
+  });
+
+  // ---------- フィナーレ画面 ----------
+  function renderFinale(){
+    var standings = computeStandings();
+    var scorers = computeScorers();
+    var champ = standings[0];
+    var mvp = scorers[0];
+    var el = document.getElementById("finaleBody");
+    var html = '<div class="card" style="text-align:center;">' +
+      '<div class="finale-title">🏆</div>' +
+      '<h2>優勝: ' + escapeHtml(champ.team.name) + '</h2>' +
+      '<p class="sub">勝点' + champ.pts + '（得失点差 ' + (champ.diff>0?"+":"") + champ.diff + '）</p>' +
+    '</div>';
+    if (mvp){
+      html += '<div class="card" style="text-align:center;">' +
+        '<div class="finale-title" style="font-size:26px;">⭐</div>' +
+        '<h3>得点王: ' + escapeHtml(mvp.name) + '（' + escapeHtml(state.teams[mvp.teamIdx].name) + '）</h3>' +
+        '<p class="sub">' + mvp.count + '得点</p>' +
+      '</div>';
+    }
+    html += '<div class="card"><h3>最終順位</h3>';
+    standings.forEach(function(r, i){
+      html += '<div class="rank-card" style="border-left-color:' + colorCss(r.team.color) + '">' +
+        '<div class="rank-num">' + (i===0 ? "👑" : (i+1)) + '</div>' +
+        '<div class="rank-info"><div class="rank-name">' + escapeHtml(r.team.name) + '</div>' +
+        '<div class="rank-sub">' + r.win + '勝' + r.draw + '分' + r.lose + '敗</div></div>' +
+        '<div class="rank-pts">' + r.pts + '<span class="rank-pts-label">pt</span></div>' +
+      '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  // ---------- 初期化 ----------
+  if (state.started){
+    document.body.classList.remove("onboarding");
+    renderSettings();
+    renderMatches();
+    renderRank();
+    showScreen("matches");
+  } else {
+    document.body.classList.add("onboarding");
+    renderOnboard();
+    showScreen("onboard");
+  }
+})();
+</script>
+</body>
+</html>

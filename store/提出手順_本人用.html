@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>総当たりスコアボード App Store提出手順</title>
+<style>
+  :root{--bg:#0f1115;--card:#1b1e26;--text:#f1f2f4;--sub:#9aa0ac;--accent:#4f8cff;--line:#2a2d36;--num-bg:#4f8cff;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;}
+  .wrap{max-width:640px;margin:0 auto;padding:40px 20px 80px;}
+  h1{font-size:26px;text-align:center;margin-bottom:6px;}
+  .sub{text-align:center;color:var(--sub);font-size:14px;margin-bottom:44px;}
+  .step{background:var(--card);border-radius:20px;padding:28px 24px;margin-bottom:28px;border:1px solid var(--line);}
+  .step-head{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+  .step-num{flex-shrink:0;width:48px;height:48px;border-radius:50%;background:var(--num-bg);color:#fff;font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center;}
+  .step-title{font-size:20px;font-weight:800;line-height:1.4;}
+  .step-body{font-size:16px;color:#dfe1e6;line-height:1.9;}
+  .where{display:inline-flex;align-items:center;gap:8px;background:#22262f;border:1px solid #3a3f4a;border-radius:10px;padding:10px 16px;font-size:15px;font-weight:700;color:#ffd166;margin-top:10px;}
+  .where::before{content:"👉";}
+  .note{font-size:13px;color:var(--sub);margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);}
+  .file-chip{display:inline-block;background:#22262f;border-radius:8px;padding:4px 10px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#a9c8ff;}
+  .arrow-down{text-align:center;color:var(--sub);font-size:26px;margin:-14px 0 14px;}
+  .final{background:linear-gradient(135deg,#1c3a6e,#1b1e26);border:1px solid #3a5faa;text-align:center;}
+  .final .step-title{font-size:22px;}
+  .checklist{list-style:none;padding:0;margin:14px 0 0;}
+  .checklist li{padding:8px 0 8px 30px;position:relative;font-size:15px;color:#dfe1e6;}
+  .checklist li::before{content:"☐";position:absolute;left:0;color:var(--accent);font-size:18px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>総当たりスコアボード<br>App Store提出手順</h1>
+  <p class="sub">全部で5ステップ。この順番どおりに進めてください。</p>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">0</div>
+      <div class="step-title">サイトを公開する</div>
+    </div>
+    <div class="step-body">
+      ターミナルで <span class="file-chip">store/go_live.sh</span> を実行すると、プライバシーポリシーなどのページが自動でネットに公開されます。App Store Connectへの入力より先に済ませてください。
+      <div class="where">ターミナルに「! bash store/go_live.sh」と入力して実行</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <div class="step-title">App Store Connectで<br>新しいアプリを作る</div>
+    </div>
+    <div class="step-body">
+      ブラウザで App Store Connect を開き、アプリの一覧画面から新規アプリを作成します。
+      <div class="where">右上の「＋」ボタン → 「新規App」</div>
+      <div class="note">プラットフォーム＝iOS、名前は次のステップでコピペします。</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <div class="step-title">Bundle IDを選ぶ</div>
+    </div>
+    <div class="step-body">
+      新規App作成の画面に出てくる「バンドルID」の一覧から、このアプリのIDを選びます。
+      <div class="where">プルダウンから「jp.co.ryoseiworld.scoreboard」を選択</div>
+      <div class="note">一覧に出てこない場合は、先にXcode側で一度ビルドしてIDを登録してから戻ってください。</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <div class="step-title">コピペシートの内容を貼る</div>
+    </div>
+    <div class="step-body">
+      <span class="file-chip">store/ASC_コピペシート.md</span> を開き、各見出し（アプリ名・サブタイトル・説明文など）の中身を、App Store Connectの対応する入力欄に上から順にコピペしていきます。
+      <div class="where">「App情報」「価格および配信状況」「Appのプライバシー」の各タブに1つずつ転記</div>
+      <ul class="checklist">
+        <li>アプリ名・サブタイトル・プロモーションテキスト・説明文</li>
+        <li>キーワード・カテゴリ（プライマリ=スポーツ／セカンダリ=ユーティリティ）</li>
+        <li>サポートURL・プライバシーポリシーURL（ステップ0で公開したURL）</li>
+        <li>年齢制限の質問（すべて「なし」/該当「いいえ」）</li>
+        <li>プライバシー申告（「データを収集していません」）</li>
+        <li>輸出コンプライアンス（暗号化なし）</li>
+        <li>審査メモ（Notes欄）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="step-num">4</div>
+      <div class="step-title">Xcodeでビルドを作って<br>アップロードする</div>
+    </div>
+    <div class="step-body">
+      Xcodeでこのアプリのプロジェクトを開き、実機用のビルド（アーカイブ）を作ってApp Store Connectに送ります。
+      <div class="where">メニューバー「Product」→「Archive」</div>
+      <div class="note">Archive完了後に出てくるOrganizerウィンドウで、対象のビルドを選んで次のボタンを押します。</div>
+      <div class="where">Organizerで「Distribute App」→「App Store Connect」→「Upload」</div>
+    </div>
+  </div>
+
+  <div class="arrow-down">↓</div>
+
+  <div class="step final">
+    <div class="step-head">
+      <div class="step-num">5</div>
+      <div class="step-title">審査に提出する</div>
+    </div>
+    <div class="step-body">
+      アップロードしたビルドがApp Store Connect上で処理完了（数分〜数十分）したら、そのビルドをアプリのバージョンに紐づけて提出します。
+      <div class="where">「ビルド」欄でアップロードしたビルドを選択 →「審査へ提出」ボタン</div>
+      <div class="note">これで作業は完了です。審査結果はApple側からメールで届きます。</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
