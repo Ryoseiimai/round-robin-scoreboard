@@ -83,7 +83,7 @@ until [ "$elapsed" -ge "$max_wait" ]; do
     echo "== 公開確認OK: ${PAGES_URL} (HTTP $status) =="
     exit 0
   fi
-  echo "== まだ公開されていません（HTTP $status）。${interval}秒待って再確認... 経過${elapsed}秒 =="
+  echo "== まだ公開されていません（HTTP ${status}）。${interval}秒待って再確認... 経過${elapsed}秒 =="
   sleep "$interval"
   elapsed=$((elapsed + interval))
 done
