@@ -26,35 +26,43 @@
   .checklist{list-style:none;padding:0;margin:14px 0 0;}
   .checklist li{padding:8px 0 8px 30px;position:relative;font-size:15px;color:#dfe1e6;}
   .checklist li::before{content:"☐";position:absolute;left:0;color:var(--accent);font-size:18px;}
+  .why{display:inline-block;background:#2a2116;border:1px solid #5a4526;border-radius:8px;padding:6px 12px;font-size:13px;color:#ffb84d;margin-bottom:14px;}
+  .diagram{background:#0d0f14;border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:14px;}
+  .win{border:1px solid #454b58;border-radius:8px;overflow:hidden;background:#181b22;}
+  .win-bar{background:#262a33;padding:6px 10px;font-size:12px;color:var(--sub);border-bottom:1px solid #454b58;}
+  .win-body{padding:14px;font-size:14px;color:#c7cad1;}
+  .btn{display:inline-block;background:var(--accent);color:#fff;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:800;margin:4px 4px 4px 0;}
+  .field{display:block;background:#20242c;border:1px solid #3a3f4a;border-radius:6px;padding:8px 12px;font-size:13px;color:#a9c8ff;margin:6px 0;}
+  .doneline{text-align:center;font-size:14px;color:var(--sub);margin-top:60px;padding-top:24px;border-top:1px dashed var(--line);}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>総当たりスコアボード<br>App Store提出手順</h1>
-  <p class="sub">全部で5ステップ。この順番どおりに進めてください。</p>
-
-  <div class="step">
-    <div class="step-head">
-      <div class="step-num">0</div>
-      <div class="step-title">サイトを公開する</div>
-    </div>
-    <div class="step-body">
-      ターミナルで <span class="file-chip">store/go_live.sh</span> を実行すると、プライバシーポリシーなどのページが自動でネットに公開されます。App Store Connectへの入力より先に済ませてください。
-      <div class="where">ターミナルに「! bash store/go_live.sh」と入力して実行</div>
-    </div>
-  </div>
-
-  <div class="arrow-down">↓</div>
+  <p class="sub">本人にしかできない作業だけ、4ステップにまとめました。</p>
 
   <div class="step">
     <div class="step-head">
       <div class="step-num">1</div>
-      <div class="step-title">App Store Connectで<br>新しいアプリを作る</div>
+      <div class="step-title">XcodeでApple IDにログイン</div>
     </div>
     <div class="step-body">
-      ブラウザで App Store Connect を開き、アプリの一覧画面から新規アプリを作成します。
-      <div class="where">右上の「＋」ボタン → 「新規App」</div>
-      <div class="note">プラットフォーム＝iOS、名前は次のステップでコピペします。</div>
+      <div class="why">なぜ本人にしかできないか：Appleの2段階認証コードは、あなたのiPhoneにしか届きません</div>
+      Xcodeを開いて、メニューバーから設定画面を開きます。
+      <div class="where">Xcode → 「Xcode」メニュー →「Settings」→「Accounts」タブ</div>
+      <div class="diagram">
+        <div class="win">
+          <div class="win-bar">Xcode Settings</div>
+          <div class="win-body">
+            Accountsタブの左下 <span class="btn">＋</span> を押す<br>
+            →「Apple ID」を選ぶ<br>
+            →メールアドレス <span class="field">kaeru3160@gmail.com</span> を入力<br>
+            →パスワード入力<br>
+            → iPhoneに届く6桁のコードを入力
+          </div>
+        </div>
+      </div>
+      <div class="note">サインインできれば、この画面にあなたの名前が表示されます。</div>
     </div>
   </div>
 
@@ -63,12 +71,27 @@
   <div class="step">
     <div class="step-head">
       <div class="step-num">2</div>
-      <div class="step-title">Bundle IDを選ぶ</div>
+      <div class="step-title">App Store Connectで<br>アプリを新規作成</div>
     </div>
     <div class="step-body">
-      新規App作成の画面に出てくる「バンドルID」の一覧から、このアプリのIDを選びます。
-      <div class="where">プルダウンから「jp.co.ryoseiworld.scoreboard」を選択</div>
-      <div class="note">一覧に出てこない場合は、先にXcode側で一度ビルドしてIDを登録してから戻ってください。</div>
+      <div class="why">なぜ本人にしかできないか：アプリの新規作成にAppleはAPIを用意していません（画面操作のみ）</div>
+      ブラウザで <span class="file-chip">https://appstoreconnect.apple.com/apps</span> を開きます。
+      <div class="diagram">
+        <div class="win">
+          <div class="win-bar">App Store Connect - Apps</div>
+          <div class="win-body">
+            右上の <span class="btn">＋ 新規App</span> を押す<br>
+            <span class="field">プラットフォーム：iOS</span>
+            <span class="field">名前：総当たりスコアボード</span>
+            <span class="field">プライマリ言語：日本語</span>
+            <span class="field">Bundle ID：jp.co.ryoseiworld.scoreboard</span>
+            <span class="field">SKU：scoreboard-2026</span>
+            → <span class="btn">作成</span>
+          </div>
+        </div>
+      </div>
+      <div class="note">Bundle IDが一覧に出てこない場合だけ、先に下の登録画面を開いてください。</div>
+      <div class="where">出てこない時だけ：「証明書、ID、プロファイル」→「識別子」→「＋」で jp.co.ryoseiworld.scoreboard を登録してから、もう一度この手順に戻る</div>
     </div>
   </div>
 
@@ -77,35 +100,13 @@
   <div class="step">
     <div class="step-head">
       <div class="step-num">3</div>
-      <div class="step-title">コピペシートの内容を貼る</div>
+      <div class="step-title">「やった」とClaudeに伝える</div>
     </div>
     <div class="step-body">
-      <span class="file-chip">store/ASC_コピペシート.md</span> を開き、各見出し（アプリ名・サブタイトル・説明文など）の中身を、App Store Connectの対応する入力欄に上から順にコピペしていきます。
-      <div class="where">「App情報」「価格および配信状況」「Appのプライバシー」の各タブに1つずつ転記</div>
-      <ul class="checklist">
-        <li>アプリ名・サブタイトル・プロモーションテキスト・説明文</li>
-        <li>キーワード・カテゴリ（プライマリ=スポーツ／セカンダリ=ユーティリティ）</li>
-        <li>サポートURL・プライバシーポリシーURL（ステップ0で公開したURL）</li>
-        <li>年齢制限の質問（すべて「なし」/該当「いいえ」）</li>
-        <li>プライバシー申告（「データを収集していません」）</li>
-        <li>輸出コンプライアンス（暗号化なし）</li>
-        <li>審査メモ（Notes欄）</li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="arrow-down">↓</div>
-
-  <div class="step">
-    <div class="step-head">
-      <div class="step-num">4</div>
-      <div class="step-title">Xcodeでビルドを作って<br>アップロードする</div>
-    </div>
-    <div class="step-body">
-      Xcodeでこのアプリのプロジェクトを開き、実機用のビルド（アーカイブ）を作ってApp Store Connectに送ります。
-      <div class="where">メニューバー「Product」→「Archive」</div>
-      <div class="note">Archive完了後に出てくるOrganizerウィンドウで、対象のビルドを選んで次のボタンを押します。</div>
-      <div class="where">Organizerで「Distribute App」→「App Store Connect」→「Upload」</div>
+      <div class="why">なぜ本人にしかできないか：ここまでの2ステップが終わらないと、この先の作業は始められません</div>
+      アプリの新規作成まで終わったら、このターミナルに一言だけ書いてください。
+      <div class="where">「作った」「できた」など一言でOK</div>
+      <div class="note">ここから先（アプリのビルド作成・アップロード・説明文などの入力）はClaudeが引き続き進めます。</div>
     </div>
   </div>
 
@@ -113,15 +114,26 @@
 
   <div class="step final">
     <div class="step-head">
-      <div class="step-num">5</div>
+      <div class="step-num">4</div>
       <div class="step-title">審査に提出する</div>
     </div>
     <div class="step-body">
-      アップロードしたビルドがApp Store Connect上で処理完了（数分〜数十分）したら、そのビルドをアプリのバージョンに紐づけて提出します。
-      <div class="where">「ビルド」欄でアップロードしたビルドを選択 →「審査へ提出」ボタン</div>
-      <div class="note">これで作業は完了です。審査結果はApple側からメールで届きます。</div>
+      <div class="why">なぜ本人にしかできないか：審査提出ボタンもAppleはAPIを用意していません（画面操作のみ）</div>
+      Claudeがアップロードを終えたと連絡したら、App Store Connectを開きます。
+      <div class="diagram">
+        <div class="win">
+          <div class="win-bar">App Store Connect - バージョン情報</div>
+          <div class="win-body">
+            「ビルド」欄でアップロード済みのビルドを選ぶ<br>
+            → <span class="btn">審査へ提出</span> を押す
+          </div>
+        </div>
+      </div>
+      <div class="note">これで完了です。審査結果はApple側からメールで届きます。</div>
     </div>
   </div>
+
+  <p class="doneline">困ったら、画面のスクリーンショットをClaudeに貼るだけでOKです。</p>
 </div>
 </body>
 </html>
