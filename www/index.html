@@ -72,7 +72,7 @@
   th{color:var(--sub);font-weight:600;font-size:12px;}
   td.name-cell{text-align:left;}
   nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:#151820;border-top:1px solid #2a2d36;padding-bottom:env(safe-area-inset-bottom);}
-  nav button{flex:1;min-height:56px;background:transparent;border-radius:0;padding:14px 0;font-size:14px;color:var(--sub);font-weight:600;}
+  nav button{flex:1;min-height:56px;background:transparent;border-radius:0;padding:14px 0;font-size:12px;color:var(--sub);font-weight:600;}
   nav button.active{color:var(--accent);}
   body.onboarding nav{display:none;}
   .empty{color:var(--sub);text-align:center;padding:20px 0;font-size:14px;}
@@ -99,6 +99,13 @@
   .set-toggle button.active{background:var(--accent);color:#fff;}
   .mini-num-input{width:64px;text-align:center;background:var(--card2);border:1px solid #333;color:var(--text);border-radius:10px;padding:8px;font-size:16px;}
   .h2h-note{font-size:11px;color:var(--sub);margin-top:2px;}
+  .points-note{font-size:12px;color:var(--sub);margin:6px 2px 0;}
+  .points-table{table-layout:fixed;}
+  .points-table .name-cell{overflow-wrap:anywhere;width:38%;}
+  .points-table .dim{color:var(--sub);}
+  .points-table .points-note{text-align:left;}
+  #historyList .card,.points-note{overflow-wrap:anywhere;}
+  .member-row input{min-width:0;}
   @media (orientation: landscape) and (max-height: 480px){
     .live-play{min-height:40vh;}
     .member-btn{min-height:48px;font-size:15px;}
@@ -109,6 +116,10 @@
 <body class="onboarding">
 
 <div id="screen-onboard" class="screen active">
+  <div class="row" style="justify-content:flex-end;gap:8px;margin-bottom:8px;">
+    <button class="ghost" id="btnOnboardPoints" type="button">📊 個人ポイント</button>
+    <button class="ghost" id="btnOnboardHistory" type="button">🗂 大会履歴</button>
+  </div>
   <div class="wizard-step-label" id="onboardStepLabel">ステップ 1 / 3</div>
   <h2>大会の準備</h2>
   <div id="onboardBody"></div>
@@ -123,8 +134,8 @@
   <div id="tournamentSettingsContainer"></div>
   <div id="teamsContainer"></div>
   <div class="card">
-    <button id="btnReset" class="danger" style="width:100%;">全データリセット</button>
-    <p class="reset-warn" id="resetNote">もう一度押すと確定します</p>
+    <button id="btnReset" class="danger" style="width:100%;">大会をリセット</button>
+    <p class="reset-warn" id="resetNote">もう一度押すと確定します（大会履歴は残ります）</p>
   </div>
 </div>
 
@@ -199,9 +210,43 @@
   </div>
 </div>
 
+<div id="screen-points" class="screen">
+  <div class="row-between" style="margin-bottom:8px;">
+    <h2 style="margin:0;">個人ポイント</h2>
+    <button class="ghost" id="btnPointsBack" type="button">← 戻る</button>
+  </div>
+  <div class="card">
+    <div class="set-toggle" id="pointsPeriodToggle">
+      <button type="button" data-period="year">今年</button>
+      <button type="button" data-period="all">全期間</button>
+    </div>
+    <h3 class="sub" id="pointsCountLabel" style="margin-top:8px;"></h3>
+  </div>
+  <div class="card">
+    <h3>総合ランキング</h3>
+    <div id="pointsTotalTable"></div>
+  </div>
+  <div class="card">
+    <h3>平均ランキング（3大会以上出場）</h3>
+    <div id="pointsAvgTable"></div>
+  </div>
+</div>
+
+<div id="screen-history" class="screen">
+  <div class="row-between" style="margin-bottom:8px;">
+    <h2 style="margin:0;">大会履歴</h2>
+    <button class="ghost" id="btnHistoryBack" type="button">← 戻る</button>
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<datalist id="knownPlayersList"></datalist>
+
 <nav>
   <button data-screen="matches" class="active">試合</button>
   <button data-screen="rank">順位</button>
+  <button data-screen="points">個人ポイント</button>
+  <button data-screen="history">大会履歴</button>
   <button data-screen="settings">設定</button>
 </nav>
 
@@ -209,6 +254,7 @@
 (function(){
   "use strict";
   var STORAGE_KEY = "rr-scoreboard-v1";
+  var HISTORY_KEY = "rrsb_history_v1"; // 大会履歴。stateとは別キーでリセットの影響を受けない
   var COLORS = [
     {key:"red", label:"赤", css:"#e5484d"},
     {key:"blue", label:"青", css:"#3b82f6"},
@@ -249,7 +295,8 @@
       matchMinutes: DEFAULT_MATCH_MIN,
       breakMinutes: DEFAULT_BREAK_MIN,
       matches: [], // {home, away, homeScore, awayScore, status, setIndex, timerRemaining, timerRunning, log:[{player, teamIdx, gender, points}]}
-      resetArmed: false
+      resetArmed: false,
+      historyId: null // 大会履歴(rrsb_history_v1)への保存先id。「大会を終える」で発番し、以後の再描画では同じidにupsertする
     };
   }
 
@@ -291,7 +338,152 @@
     }
   }
   function save(){
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){ /* 保存不可でも操作は続行 */ }
+  }
+
+  /* POINTS-CORE-START */
+  function playerName(name){ return typeof name === "string" ? name.trim() : ""; }
+  function localDate(date){
+    return date.getFullYear() + "-" + String(date.getMonth()+1).padStart(2,"0") + "-" + String(date.getDate()).padStart(2,"0");
+  }
+  function rankPoints(rank){ return [3,2,1,0][rank-1] || 0; }
+  function tournamentPoints(record){
+    var points = Object.create(null);
+    record.standings.forEach(function(team){
+      team.members.forEach(function(value){
+        var name = playerName(value);
+        if (!name) return;
+        // 同名は1大会1出場。重複登録時は最上位の所属を採用する。
+        points[name] = Math.max(points[name] || 0, rankPoints(team.rank));
+      });
+    });
+    var awarded = Object.create(null);
+    record.mvps.forEach(function(value){
+      var name = playerName(value);
+      if (!name || awarded[name]) return;
+      points[name] = (points[name] || 0) + 1;
+      awarded[name] = true;
+    });
+    return points;
+  }
+  function aggregatePoints(history, period, year){
+    var records = history.filter(function(r){ return period === "all" || r.date.slice(0,4) === String(year); });
+    var players = Object.create(null);
+    records.forEach(function(record){
+      var points = tournamentPoints(record);
+      Object.keys(points).forEach(function(name){
+        if (!players[name]) players[name] = {name:name, total:0, apps:0};
+        players[name].total += points[name];
+        players[name].apps++;
+      });
+    });
+    var total = Object.keys(players).map(function(name){
+      var p = players[name];
+      p.avg = Math.round(p.total / p.apps * 10) / 10;
+      p.remaining = Math.max(0, 3-p.apps);
+      return p;
+    }).sort(function(a,b){ return b.total-a.total || a.apps-b.apps || a.name.localeCompare(b.name,"ja"); });
+    var average = total.filter(function(p){ return p.apps>=3; }).sort(function(a,b){ return b.avg-a.avg || b.total-a.total; });
+    return {count:records.length, total:total, average:average, pending:total.filter(function(p){ return p.apps<3; })};
+  }
+  /* POINTS-CORE-END */
+
+  // ---------- 大会履歴・個人ポイント ----------
+  var tournamentHistory = loadHistory();
+  var pointsPeriod = "year";
+  var historySaveFailed = false;
+  function loadHistory(){
+    try{
+      var records = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+      if (!Array.isArray(records)) return [];
+      return records.filter(function(r){
+        return r && typeof r.id === "string" && typeof r.date === "string" &&
+          /^\d{4}-\d{2}-\d{2}$/.test(r.date) && Array.isArray(r.mvps) && Array.isArray(r.standings) &&
+          r.standings.every(function(t){ return t && typeof t.teamName === "string" && Array.isArray(t.members); });
+      });
+    }catch(e){ return []; }
+  }
+  function saveHistory(){
+    try{
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(tournamentHistory));
+      historySaveFailed = false;
+    }catch(e){ historySaveFailed = true; }
+  }
+  function allMatchesDone(){
+    return state.matches.length === 12 && state.matches.every(function(m){ return m.status === "done"; });
+  }
+  function saveTournamentHistory(){
+    if (!allMatchesDone()) return;
+    var previous = tournamentHistory.find(function(r){ return r.id === state.historyId; });
+    if (!state.historyId) state.historyId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+    save();
+    var scorers = computeScorers();
+    var record = {
+      id:state.historyId, date:previous ? previous.date : localDate(new Date()), title:"総当たり戦",
+      standings:computeStandings().map(function(r,i){
+        return {teamName:r.team.name, members:r.team.members.map(function(m){ return playerName(m.name); }).filter(Boolean), rank:i+1};
+      }),
+      mvps:scorers.filter(function(s){ return s.count>0 && s.count===scorers[0].count; }).map(function(s){ return playerName(s.name); }).filter(Boolean),
+      scorers:scorers.map(function(s){ return {name:playerName(s.name), count:s.count}; })
+    };
+    var index = tournamentHistory.findIndex(function(r){ return r.id === record.id; });
+    if (index<0) tournamentHistory.push(record); else tournamentHistory[index] = record;
+    saveHistory();
+    renderKnownPlayers();
+  }
+  function renderKnownPlayers(){
+    var names = aggregatePoints(tournamentHistory,"all",0).total.map(function(p){ return p.name; });
+    names.sort(function(a,b){ return a.localeCompare(b,"ja"); });
+    document.getElementById("knownPlayersList").innerHTML = names.map(function(name){ return '<option value="' + escapeHtml(name) + '"></option>'; }).join("");
+  }
+  function pointsTable(players, average){
+    if (!players.length) return '<div class="empty">まだ記録がありません</div>';
+    return '<table class="points-table"><thead><tr><th class="name-cell">選手</th><th>合計pt</th><th>大会数</th><th>平均pt</th></tr></thead><tbody>' + players.map(function(p){
+      var pending = average && p.remaining>0;
+      return '<tr' + (pending ? ' class="dim"' : '') + '><td class="name-cell">' + escapeHtml(p.name) +
+        (pending ? '<div class="points-note">あと' + p.remaining + '大会で対象</div>' : '') + '</td><td>' + p.total + '</td><td>' + p.apps + '</td><td>' + p.avg.toFixed(1) + '</td></tr>';
+    }).join("") + '</tbody></table>';
+  }
+  function renderPoints(){
+    var result = aggregatePoints(tournamentHistory,pointsPeriod,new Date().getFullYear());
+    document.getElementById("pointsCountLabel").textContent = (pointsPeriod==="year" ? "今年" : "全期間") + "：集計対象 " + result.count + "大会";
+    document.querySelectorAll("#pointsPeriodToggle button").forEach(function(b){ b.classList.toggle("active",b.dataset.period===pointsPeriod); });
+    document.getElementById("pointsTotalTable").innerHTML = pointsTable(result.total,false);
+    document.getElementById("pointsAvgTable").innerHTML = pointsTable(result.average.concat(result.pending),true);
+  }
+  document.querySelectorAll("#pointsPeriodToggle button").forEach(function(b){
+    b.addEventListener("click",function(){ pointsPeriod = b.dataset.period; renderPoints(); });
+  });
+  function renderHistory(){
+    var list = document.getElementById("historyList");
+    list.innerHTML = historySaveFailed ? '<p class="sub">履歴を端末に保存できませんでした。変更は再読み込み・アプリ終了まで有効です。</p>' : "";
+    if (!tournamentHistory.length) list.innerHTML += '<div class="empty">まだ大会履歴がありません</div>';
+    tournamentHistory.slice().reverse().forEach(function(record){
+      var card = document.createElement("div");
+      card.className = "card";
+      var champ = record.standings.find(function(t){ return t.rank===1; });
+      card.innerHTML = '<h3>' + escapeHtml(record.date) + '</h3><p>優勝：' + escapeHtml(champ ? champ.teamName : "—") +
+        '</p><p>得点王：' + escapeHtml(record.mvps.join("、") || "なし") + '</p>';
+      var del = document.createElement("button");
+      del.className = "ghost";
+      del.textContent = "削除";
+      var panel = document.createElement("div");
+      panel.className = "confirm-panel";
+      panel.hidden = true;
+      panel.innerHTML = '<p>この大会を削除しますか？個人ポイントも再計算されます。</p><div class="row"><button class="ghost">キャンセル</button><button class="danger">削除する</button></div>';
+      del.addEventListener("click",function(){ panel.hidden = false; del.hidden = true; });
+      panel.querySelector(".ghost").addEventListener("click",function(){ panel.hidden = true; del.hidden = false; });
+      panel.querySelector(".danger").addEventListener("click",function(){
+        tournamentHistory = tournamentHistory.filter(function(r){ return r.id!==record.id; });
+        saveHistory();
+        renderHistory();
+        renderPoints();
+        renderKnownPlayers();
+      });
+      card.appendChild(del);
+      card.appendChild(panel);
+      list.appendChild(card);
+    });
   }
 
   // ---------- 日程生成 ----------
@@ -319,7 +511,7 @@
   }
 
   // ---------- タブ切替 ----------
-  var screens = ["onboard","settings","matches","live","rank","finale"];
+  var screens = ["onboard","settings","matches","live","rank","finale","points","history"];
   function showScreen(name){
     screens.forEach(function(s){
       document.getElementById("screen-"+s).classList.toggle("active", s===name);
@@ -335,7 +527,31 @@
       if (b.dataset.screen==="matches") renderMatches();
       if (b.dataset.screen==="rank") renderRank();
       if (b.dataset.screen==="settings") renderSettings();
+      if (b.dataset.screen==="points") renderPoints();
+      if (b.dataset.screen==="history") renderHistory();
     });
+  });
+
+  function pointsHistoryBackTarget(){
+    return state.started ? "matches" : "onboard";
+  }
+  document.getElementById("btnOnboardPoints").addEventListener("click", function(){
+    renderPoints();
+    showScreen("points");
+  });
+  document.getElementById("btnOnboardHistory").addEventListener("click", function(){
+    renderHistory();
+    showScreen("history");
+  });
+  document.getElementById("btnPointsBack").addEventListener("click", function(){
+    var t = pointsHistoryBackTarget();
+    showScreen(t);
+    if (t==="matches") renderMatches(); else renderOnboard();
+  });
+  document.getElementById("btnHistoryBack").addEventListener("click", function(){
+    var t = pointsHistoryBackTarget();
+    showScreen(t);
+    if (t==="matches") renderMatches(); else renderOnboard();
   });
 
   // ---------- 初回ウィザード ----------
@@ -483,6 +699,10 @@
     hint.className = "sub";
     hint.textContent = "男女比の目安は男4:女2。未入力の行は無視されます。";
     block.appendChild(hint);
+    var hint2 = document.createElement("p");
+    hint2.className = "sub";
+    hint2.textContent = "💡 過去の大会に出た名前は入力時に候補表示されます。同じ名前は同一人物として集計します。";
+    block.appendChild(hint2);
 
     var memberList = document.createElement("div");
     team.members.forEach(function(member, mi){
@@ -492,6 +712,7 @@
       input.type = "text";
       input.value = member.name;
       input.placeholder = "メンバー名";
+      input.setAttribute("list", "knownPlayersList");
       input.style.flex = "1";
       input.addEventListener("input", function(){
         member.name = input.value;
@@ -529,6 +750,7 @@
   }
 
   function renderOnboard(){
+    renderKnownPlayers();
     document.getElementById("onboardStepLabel").textContent = "ステップ " + onboardStep + " / 3";
     var body = document.getElementById("onboardBody");
     body.innerHTML = "";
@@ -693,16 +915,18 @@
   resetBtn.addEventListener("click", function(){
     if (!resetArmed){
       resetArmed = true;
-      resetBtn.textContent = "もう一度押すと全消去します";
+      resetBtn.textContent = "もう一度押すと大会をリセット";
       document.getElementById("resetNote").textContent = "取り消すには他の画面へ移動してください";
       return;
     }
-    localStorage.removeItem(STORAGE_KEY);
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){ /* 保存不可でもリセットは続行 */ }
+    currentMatchIndex = null;
+    stopBreakTimer();
     state = defaultState();
     resetArmed = false;
     onboardStep = 1;
-    resetBtn.textContent = "全データリセット";
-    document.getElementById("resetNote").textContent = "もう一度押すと確定します";
+    resetBtn.textContent = "大会をリセット";
+    document.getElementById("resetNote").textContent = "もう一度押すと確定します（大会履歴は残ります）";
     document.body.classList.add("onboarding");
     renderOnboard();
     renderSettings();
@@ -866,6 +1090,7 @@
       var gf = document.getElementById("btnGoFinale");
       if (gf) gf.addEventListener("click", function(){
         stopBreakTimer();
+        if (allMatchesDone()) saveTournamentHistory();
         renderFinale();
         showScreen("finale");
       });
@@ -1295,6 +1520,10 @@
         '<p class="sub">' + mvp.count + '得点</p>' +
       '</div>';
     }
+    var awards = standings.map(function(r,i){ return r.team.name + "全員 +" + rankPoints(i+1) + "pt"; });
+    if (mvp && mvp.count>0) awards.push("得点王 " + topMvps.map(function(s){ return s.name; }).join("・") + (topMvps.length>1 ? " 各+1pt" : " +1pt"));
+    html += '<div class="card"><h3>今大会で獲得した個人pt</h3><p class="points-note">' + escapeHtml(allMatchesDone() ? awards.join("／") : "未終了の試合があるため、個人ポイントはまだ記録されていません") + '</p>' +
+      (historySaveFailed ? '<p class="sub">履歴を端末に保存できませんでした。再読み込み前に保存環境を確認してください。</p>' : '') + '</div>';
     html += '<div class="card"><h3>最終順位</h3>';
     standings.forEach(function(r, i){
       html += '<div class="rank-card" style="border-left-color:' + colorCss(r.team.color) + '">' +
