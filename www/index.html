@@ -720,6 +720,7 @@
       input.addEventListener("input", function(){
         member.name = input.value;
         save();
+        updateSampleTeamsVisibility();
       });
       mrow.appendChild(input);
       mrow.appendChild(makeGenderToggleBtn(member, rerender));
@@ -752,11 +753,62 @@
     return block;
   }
 
+  function hasMemberNames(){
+    return state.teams.some(function(team){
+      return team.members.some(function(member){ return member.name && member.name.trim(); });
+    });
+  }
+
+  function updateSampleTeamsVisibility(){
+    var box = document.getElementById("sampleTeamsBox");
+    if (box) box.hidden = hasMemberNames();
+  }
+
+  function buildSampleTeamsBlock(){
+    var box = document.createElement("div");
+    box.id = "sampleTeamsBox";
+    box.className = "card";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "secondary";
+    btn.style.width = "100%";
+    btn.textContent = "サンプルのチームで試す";
+    btn.addEventListener("click", function(){
+      if (hasMemberNames()) return;
+      var names = [
+        ["田中 翔", "佐藤 蓮", "鈴木 大和", "高橋 陸", "伊藤 陽菜", "渡辺 結衣"],
+        ["山本 悠真", "中村 湊", "小林 樹", "加藤 大輝", "吉田 葵", "山田 美咲"],
+        ["佐々木 翼", "山口 健太", "松本 颯太", "井上 海斗", "木村 凛", "林 桜"],
+        ["清水 晴翔", "斎藤 直樹", "池田 拓海", "橋本 陽太", "阿部 七海", "石川 花"]
+      ];
+      var teamNames = ["赤組", "青組", "黄組", "緑組"];
+      state.teams.forEach(function(team, i){
+        if (!team.name.trim()) team.name = teamNames[i];
+        team.members = names[i].map(function(name, j){ return {name:name, gender:j<4 ? "M" : "F"}; });
+      });
+      save();
+      onboardStep = 2;
+      renderOnboard();
+      window.scrollTo(0, 0);
+    });
+    box.appendChild(btn);
+    var note = document.createElement("p");
+    note.className = "sub";
+    note.style.marginTop = "8px";
+    note.textContent = "見本の名前が入ります。本番では消して入力し直してください";
+    box.appendChild(note);
+    return box;
+  }
+
   function renderOnboard(){
     renderKnownPlayers();
     document.getElementById("onboardStepLabel").textContent = "ステップ " + onboardStep + " / 3";
     var body = document.getElementById("onboardBody");
     body.innerHTML = "";
+    if (onboardStep<3){
+      body.appendChild(buildSampleTeamsBlock());
+      updateSampleTeamsVisibility();
+    }
     var backBtn = document.getElementById("btnOnboardBack");
     var nextBtn = document.getElementById("btnOnboardNext");
 
