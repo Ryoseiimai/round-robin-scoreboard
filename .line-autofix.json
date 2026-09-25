@@ -1,0 +1,10 @@
+{
+  "branch": "main",
+  "testCmd": "node --test tests/",
+  "e2eCmd": "node ../scripts/scoreboard-e2e.mjs",
+  "previewDir": "www",
+  "allowedPrefixes": ["www/"],
+  "maxDiffLines": 300,
+  "publishCopy": { "from": "www", "to": "docs/app" },
+  "productionUrl": "https://ryoseiimai.github.io/round-robin-scoreboard/app/"
+}

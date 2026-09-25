@@ -1,0 +1,33 @@
+name: LINE autofix
+run-name: '${{ inputs.stage }} / ${{ inputs.request_id }}'
+# Public repos cannot directly use reusable workflows from a private repo.
+# This bridge dispatches the private controller, which calls loop.yml locally.
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        type: choice
+        options: [triage, implement, revise, merge]
+        required: true
+      request_id:
+        type: string
+        required: true
+      text:
+        type: string
+        default: ''
+permissions: {}
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.AUTOFIX_GITHUB_TOKEN }}
+          script: |
+            const { stage, request_id } = context.payload.inputs;
+            if (!['triage','implement','revise','merge'].includes(stage) || !/^[a-zA-Z0-9-]+$/.test(request_id)) throw new Error('Invalid inputs');
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'Ryoseiimai', repo: 'line-autofix', workflow_id: 'run.yml', ref: 'main',
+              inputs: { stage, request_id, text: '', repository: context.repo.owner + '/' + context.repo.repo }
+            });
