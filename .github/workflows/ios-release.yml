@@ -1,0 +1,152 @@
+name: iOS release
+run-name: 'iOS release (dry_run=${{ inputs.dry_run }})'
+# LINEで承認者が「アプリにも反映して」と言った時（line-autofix Workerがdispatch）と、
+# 毎週月曜（www/に未反映の変更がある時だけ）に、ASC APIキーで無人ビルド・審査提出まで行う。
+# Xcode本人サインインは使わない（ASC APIキーによる自動署名管理 -allowProvisioningUpdates）。
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'true=archiveまでで停止（アップロード・審査提出はしない）'
+        type: boolean
+        default: true
+      whats_new:
+        description: '「このバージョンの最新情報」。空なら直近のwww/変更から自動生成'
+        type: string
+        default: ''
+  schedule:
+    - cron: '0 3 * * 1' # 毎週月曜 12:00 JST。www/の未反映変更がなければジョブ内で早期終了する
+permissions:
+  contents: write # 反映済みタグ(ios-last-release)の更新に使う。他リポジトリへは触れない
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: 定期実行はwww/に未反映の変更がある時だけ進める
+        if: github.event_name == 'schedule'
+        run: |
+          set -euo pipefail
+          if git rev-parse -q --verify refs/tags/ios-last-release >/dev/null; then
+            if git diff --quiet ios-last-release -- www/; then
+              echo "www/に前回反映からの変更なし。今回はスキップします" >> "$GITHUB_STEP_SUMMARY"
+              echo "skip=true" >> "$GITHUB_ENV"
+            fi
+          fi
+
+      - uses: actions/setup-node@v4
+        if: env.skip != 'true'
+        with: { node-version: '22' }
+
+      - name: npm ci
+        if: env.skip != 'true'
+        run: npm ci
+
+      - name: cap sync ios
+        if: env.skip != 'true'
+        run: npx cap sync ios
+
+      - name: ASC APIキーを一時ファイルへ書き出す
+        if: env.skip != 'true'
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/asc/AuthKey.p8"
+
+      - name: 審査中バージョンの有無を確認し、出すversionを決める
+        if: env.skip != 'true'
+        id: prepare
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_PATH: ${{ runner.temp }}/asc/AuthKey.p8
+        run: |
+          set -euo pipefail
+          CURRENT=$(sed -n 's/.*MARKETING_VERSION = \(.*\);/\1/p' ios/App/App.xcodeproj/project.pbxproj | head -1)
+          node scripts/ios-release.mjs prepare "$CURRENT"
+
+      - name: 審査中なら今回は見送って終了
+        if: env.skip != 'true' && steps.prepare.outputs.blocked == 'true'
+        run: |
+          echo "審査中のバージョンがあるため見送ります: ${{ steps.prepare.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "skip=true" >> "$GITHUB_ENV"
+
+      - name: MARKETING_VERSIONを反映するバージョンに合わせる
+        if: env.skip != 'true'
+        run: |
+          set -euo pipefail
+          sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = ${{ steps.prepare.outputs.version }};/" ios/App/App.xcodeproj/project.pbxproj
+
+      - name: archive（署名はASC APIキーによる自動管理）
+        if: env.skip != 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" -destination 'generic/platform=iOS' \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive
+
+      - name: dry_run はここで終了（アップロード・審査提出はしない）
+        if: env.skip != 'true' && inputs.dry_run == true
+        run: echo "dry_run=true のため archive までで停止しました" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: export（App Store Connectへ直接アップロード。ビルド番号は自動採番）
+        if: env.skip != 'true' && inputs.dry_run != true
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist store/ExportOptionsUpload.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: 「このバージョンの最新情報」を用意
+        if: env.skip != 'true' && inputs.dry_run != true
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.whats_new }}" ]; then
+            printf '%s' "${{ inputs.whats_new }}" > "$RUNNER_TEMP/whats-new.txt"
+          elif git rev-parse -q --verify refs/tags/ios-last-release >/dev/null; then
+            { echo "直近の改善:"; git log --format='- %s' ios-last-release..HEAD -- www/ | head -20; } > "$RUNNER_TEMP/whats-new.txt"
+          else
+            echo "直近の改善を反映しました。" > "$RUNNER_TEMP/whats-new.txt"
+          fi
+
+      - name: ビルド処理完了を待って審査提出（承認後に自動リリース）
+        if: env.skip != 'true' && inputs.dry_run != true
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_PATH: ${{ runner.temp }}/asc/AuthKey.p8
+        run: |
+          set -euo pipefail
+          node scripts/ios-release.mjs finalize "${{ steps.prepare.outputs.version_id }}" "${{ steps.prepare.outputs.version }}" "$RUNNER_TEMP/whats-new.txt"
+
+      - name: 反映済みタグを更新
+        if: env.skip != 'true' && inputs.dry_run != true
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag -f ios-last-release
+          git push origin ios-last-release --force
