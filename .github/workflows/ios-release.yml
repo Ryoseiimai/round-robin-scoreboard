@@ -93,7 +93,9 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           set -euo pipefail
-          xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Release \
+          # 注: このrepoはCapacitor 8のSPM構成でトップレベルの.xcworkspaceを生成しない(README記載のopenコマンドは古い)。
+          # -project でApp.xcodeproj自体を指定する(xcodebuild -list で確認済み)。
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
             -archivePath "$RUNNER_TEMP/App.xcarchive" -destination 'generic/platform=iOS' \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
