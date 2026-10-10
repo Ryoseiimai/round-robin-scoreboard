@@ -3,3 +3,8 @@ ios/App/Pods/
 ios/App/build/
 DerivedData/
 .DS_Store
+
+# ローカル専用の控え(本人/招待相手限定の案内・画面スクショ等)。公開リポジトリへは絶対に含めない。
+控え/
+.playwright-mcp/
+store/review-reply-2.1.md

@@ -76,15 +76,19 @@ jobs:
 
       - name: 審査中なら今回は見送って終了
         if: env.skip != 'true' && steps.prepare.outputs.blocked == 'true'
+        env:
+          BLOCK_REASON: ${{ steps.prepare.outputs.reason }}
         run: |
-          echo "審査中のバージョンがあるため見送ります: ${{ steps.prepare.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "審査中のバージョンがあるため見送ります: $BLOCK_REASON" >> "$GITHUB_STEP_SUMMARY"
           echo "skip=true" >> "$GITHUB_ENV"
 
       - name: MARKETING_VERSIONを反映するバージョンに合わせる
         if: env.skip != 'true'
+        env:
+          NEW_VERSION: ${{ steps.prepare.outputs.version }}
         run: |
           set -euo pipefail
-          sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = ${{ steps.prepare.outputs.version }};/" ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' "s/MARKETING_VERSION = .*/MARKETING_VERSION = ${NEW_VERSION};/" ios/App/App.xcodeproj/project.pbxproj
 
       - name: archive（署名はASC APIキーによる自動管理）
         if: env.skip != 'true'
@@ -124,10 +128,12 @@ jobs:
 
       - name: 「このバージョンの最新情報」を用意
         if: env.skip != 'true' && inputs.dry_run != true
+        env:
+          WHATS_NEW: ${{ inputs.whats_new }}
         run: |
           set -euo pipefail
-          if [ -n "${{ inputs.whats_new }}" ]; then
-            printf '%s' "${{ inputs.whats_new }}" > "$RUNNER_TEMP/whats-new.txt"
+          if [ -n "$WHATS_NEW" ]; then
+            printf '%s' "$WHATS_NEW" > "$RUNNER_TEMP/whats-new.txt"
           elif git rev-parse -q --verify refs/tags/ios-last-release >/dev/null; then
             { echo "直近の改善:"; git log --format='- %s' ios-last-release..HEAD -- www/ | head -20; } > "$RUNNER_TEMP/whats-new.txt"
           else
@@ -140,9 +146,11 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_PATH: ${{ runner.temp }}/asc/AuthKey.p8
+          VERSION_ID: ${{ steps.prepare.outputs.version_id }}
+          VERSION: ${{ steps.prepare.outputs.version }}
         run: |
           set -euo pipefail
-          node scripts/ios-release.mjs finalize "${{ steps.prepare.outputs.version_id }}" "${{ steps.prepare.outputs.version }}" "$RUNNER_TEMP/whats-new.txt"
+          node scripts/ios-release.mjs finalize "$VERSION_ID" "$VERSION" "$RUNNER_TEMP/whats-new.txt"
 
       - name: 反映済みタグを更新
         if: env.skip != 'true' && inputs.dry_run != true

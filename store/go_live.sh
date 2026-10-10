@@ -40,6 +40,10 @@ mkdir -p docs/app
 cp www/index.html docs/app/index.html
 
 echo "== 4. git add / commit =="
+# 控え/・.playwright-mcp/・store/review-reply-2.1.md は.gitignoreで除外済み。
+# git add -A は.gitignoreに従うため、ここでは追加の対象外指定をしない
+# (ignore済みパスを明示パスspecでも除外しようとすると、gitが"ignored files"警告つきで
+#  終了コード1を返し、set -euo pipefailのこのスクリプトが毎回ここで止まるため採用しない)。
 git add -A
 if git diff --cached --quiet; then
   echo "== コミット対象の変更なし。スキップ =="
